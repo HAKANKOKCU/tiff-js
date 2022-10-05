@@ -330,7 +330,10 @@ TIFFParser.prototype = {
 
 			tiffFields[fieldTagName] = { 'type': fieldTypeName, 'values': fieldValues };
 		}
-
+		
+		if (this.fileDirectories == undefined) this.fileDirectories = [];
+		//If the filedirectiories isn't defined, just create an empty array.
+		
 		this.fileDirectories.push( tiffFields );
 
 		var nextIFDByteOffset = this.getBytes(4, i);
