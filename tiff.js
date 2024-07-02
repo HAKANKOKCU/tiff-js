@@ -3,13 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
-
 function TIFFParser() {
 	this.tiffDataView = undefined;
 	this.littleEndian = undefined;
 	this.fileDirectories = [];
-};
-
+}
 TIFFParser.prototype = {
 	isLittleEndian: function () {
 		// Get byte order mark.
@@ -293,7 +291,10 @@ TIFFParser.prototype = {
 		}
 
 		if (fieldTypeName === 'ASCII') {
-			fieldValues.forEach(function(e, i, a) { a[i] = String.fromCharCode(e); });
+			for (let i = 0; i < fieldValues.length;i++) {
+				fieldValues[i] = String.fromCharCode(fieldValues[i]);
+			}
+			//fieldValues.forEach(function(e, i, a) {  });
 		}
 
 		return fieldValues;
@@ -330,6 +331,7 @@ TIFFParser.prototype = {
 
 			tiffFields[fieldTagName] = { 'type': fieldTypeName, 'values': fieldValues };
 		}
+		
 		
 		if (this.fileDirectories == undefined) this.fileDirectories = [];
 		//If the filedirectiories isn't defined, just create an empty array.
@@ -381,8 +383,9 @@ TIFFParser.prototype = {
 
 		var bitsPerPixel = 0;
 		var hasBytesPerPixel = false;
-
-		fileDirectory.BitsPerSample.values.forEach(function(bitsPerSample, i, bitsPerSampleValues) {
+		var bitsPerSampleValues = fileDirectory.BitsPerSample.values;
+		for (let i = 0; i < fileDirectory.BitsPerSample.values.length;i++) {
+			var bitsPerSample = fileDirectory.BitsPerSample.values[i];
 			sampleProperties[i] = {
 				'bitsPerSample': bitsPerSample,
 				'hasBytesPerSample': false,
@@ -395,7 +398,21 @@ TIFFParser.prototype = {
 			}
 
 			bitsPerPixel += bitsPerSample;
-		}, this);
+		}
+		//fileDirectory.BitsPerSample.values.forEach(function(bitsPerSample, i, bitsPerSampleValues) {
+		//	sampleProperties[i] = {
+		//		'bitsPerSample': bitsPerSample,
+		//		'hasBytesPerSample': false,
+		//		'bytesPerSample': undefined,
+		//	};
+//
+		//	if ((bitsPerSample % 8) === 0) {
+		//		sampleProperties[i].hasBytesPerSample = true;
+		//		sampleProperties[i].bytesPerSample = bitsPerSample / 8;
+		//	}
+//
+		//	bitsPerPixel += bitsPerSample;
+		//}, this);
 
 		if ((bitsPerPixel % 8) === 0) {
 			hasBytesPerPixel = true;
@@ -599,7 +616,7 @@ TIFFParser.prototype = {
 				var colorMapValues = fileDirectory.ColorMap.values;
 				var colorMapSampleSize = Math.pow(2, sampleProperties[0].bitsPerSample);
 			}
-
+			var imagedata = ctx.getImageData(0,0,this.canvas.width,this.canvas.height)
 			// Loop through the strips in the image.
 			for (var i = 0; i < numStrips; i++) {
 				// The last strip may be short.
@@ -641,7 +658,10 @@ TIFFParser.prototype = {
 								}
 
 								// Invert samples.
-								pixelSamples.forEach(function(sample, index, samples) { samples[index] = invertValue - sample; });
+								for (let i = 0; i < pixelSamples.length;i++) {
+									pixelSamples[i] = invertValue - pixelSamples[i];
+								}
+								//pixelSamples.forEach(function(sample, index, samples) { samples[index] = invertValue - sample; });
 
 							// Bilevel or Grayscale
 							// BlackIsZero
@@ -694,14 +714,27 @@ TIFFParser.prototype = {
 								throw RangeError( 'Unknown Photometric Interpretation:', photometricInterpretation );
 							break;
 						}
-
-						ctx.fillStyle = this.makeRGBAFillValue(red, green, blue, opacity);
-						ctx.fillRect(x, yPadding + y, 1, 1);
+						//this.colorDatas = imagedata.data
+						//ctx.fillStyle = this.makeRGBAFillValue(red, green, blue, opacity);
+						//ctx.fillRect(x, yPadding + y, 1, 1);
+						//this.colorDatas.push(red)
+						//this.colorDatas.push(green)
+						//this.colorDatas.push(blue)
+						//this.colorDatas.push(opacity)
+						//var datas = new Uint8ClampedArray([red, green, blue, opacity])
+						if(typeof opacity === 'undefined') {
+							opacity = 1.0;
+						}
+						setPixel(imagedata, x, yPadding + y,[red, green, blue, opacity * 255])
+						//console.log(datas)
+						//ctx.putImageData(datas, x, yPadding + y);
 					}
 				}
 
 				numRowsInPreviousStrip = numRowsInStrip;
 			}
+			//console.log(this.colorDatas)
+			ctx.putImageData(imagedata, 0, 0);
 		}
 
 /*		for (var i = 0, numFileDirectories = this.fileDirectories.length; i < numFileDirectories; i++) {
@@ -710,4 +743,17 @@ TIFFParser.prototype = {
 
 		return this.canvas;
 	},
+	reset: function() {
+		this.tiffDataView = undefined;
+		this.littleEndian = undefined;
+		this.fileDirectories = [];
+	}
+}
+
+function setPixel(imageData, x, y, color) {
+	const offset = ((y * imageData.width) + x) * 4;
+	imageData.data[offset + 0] = color[0];
+	imageData.data[offset + 1] = color[1];
+	imageData.data[offset + 2] = color[2];
+	imageData.data[offset + 3] = color[3];
 }
