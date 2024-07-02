@@ -1,3 +1,4 @@
+This fork includes getImageData, putImageData updates made by me.
 # TIFF.js #
 
 A JavaScript-based parser for the TIFF image format.
